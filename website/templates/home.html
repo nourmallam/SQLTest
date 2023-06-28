@@ -1,14 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}">
-</head>
-<body>
-    <form method="post">
-        <label for="url">Enter a URL</label>
-        <input type="text" id="url" name="url">
-    </form>
-</body>
-</html>
+{% extends 'base.html'%}
+{ % block title %}
+Home Page
+{% end block %}
+{% block content %}
+<h1>Home Page</h1>
+{% end block %}
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Title</title>-->
+<!--    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}">-->
+<!--</head>-->
+<!--<body>-->
+<!--    <form method="post">-->
+<!--        <label for="url">Enter a URL</label>-->
+<!--        <input type="text" id="url" name="url">-->
+<!--    </form>-->
+<!--</body>-->
+<!--</html>-->
