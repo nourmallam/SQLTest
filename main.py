@@ -1,14 +1,14 @@
-from flask import Flask
-
+from flask import Flask, request, url_for, render_template, redirect
 app = Flask(__name__)
 
-@app.route('/', methods=['GET', 'POST'])
-def home(var):
-    # data = request.form
-    # data = str(data.get(key='url'))
-    # if type(data) == str and len(data) > 1:
-    #     driver.get(data)
-    return f"Hello {var}!"
+
+@app.route("/", methods=["POST", "GET"])
+def home():
+    if request.method == "POST":
+        url = request.form["nm"]
+        return redirect(url)
+    return render_template("index.html")
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
