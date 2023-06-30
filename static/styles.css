@@ -1,0 +1,14 @@
+body {
+    background-color:#f9ebf2;
+    font-family: "Lucida Console", "Courier New", monospace;
+    font-weight: bold;
+    background-image: url('img.png');
+}
+
+form{
+    margin: auto;
+    margin-top: 40vh;
+    text-align: center;
+    text-shadow: 2px 2px 4px #000000;
+    color: white;
+}
