@@ -1,13 +1,63 @@
+import asyncio
+import aiohttp
+from fake_useragent import UserAgent
 from flask import Flask, request, render_template
-import time
-from pprint import pprint
-from zapv2 import ZAPv2
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+ua = UserAgent()
+driver = webdriver.Edge()
+
+
+class ColorPalette:
+    G = '\033[92m'  # green
+    Y = '\033[93m'  # yellow
+    B = '\033[94m'  # blue
+    R = '\033[91m'  # red
+    W = '\033[0m'  # white
+    M = '\u001b[35m'  # magenta
+
+
+def read_wordlist():
+    with open("login_wordlist.txt") as text_file:
+        wordlist = text_file.read()
+        splitted_wordlist = wordlist.strip().split("\n")
+    return splitted_wordlist
+
+
+word_list = read_wordlist()
+
+founded_url = []
+
+
+async def search_login(session, url, word):
+    try:
+        async with session.get(url + word, allow_redirects=False, verify_ssl=False) as response:
+            status_code = response.status
+            driver.get(url)
+            if status_code == 200 and driver.find_element(By.ID, "username") is not None:
+                print(f"{url}{word} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
+                founded_url.append(url + word)
+            elif status_code == 403:
+                print(f"{url}{word} {ColorPalette.M} --> {ColorPalette.B} Forbidden! {ColorPalette.W}")
+
+            elif status_code == 404:
+                print(f"{url}{word} {ColorPalette.M} --> {ColorPalette.R} Not Found! {ColorPalette.W}")
+
+            elif status_code in [302, 301]:
+                print(f"{url}{word} {ColorPalette.M} --> {ColorPalette.Y} Redirecting! {ColorPalette.W}")
+
+            else:
+                print(f"{ColorPalette.B} {url}{word} {ColorPalette.W}  --> {status_code} ")
+    except aiohttp.ClientConnectorError:
+        pass
+
 
 app = Flask(__name__)
 
 
 @app.route("/", methods=["POST", "GET"])
-def home():
+async def home():
     if request.method == "POST":
         url = request.form["nm"]
         if url[0:3] == "www":
@@ -17,48 +67,32 @@ def home():
         else:
             url_string = "https://www." + url
 
-        target = "https://localhost"
+        tasks = []
+        url = url_string
 
-        zap = ZAPv2(proxies={'http': target+":8090", 'https': target+":8090"})
+        if not url.endswith('/'):
+            url += '/'
 
-        target = target + ":8080"
+        headers = {
+            'User-Agent': ua.random
+        }
 
-        print('Accessing target %s' % target)
-        zap.urlopen(target)
+        async with aiohttp.ClientSession(headers=headers) as session:
+            for word in word_list:
+                tasks.append(search_login(session=session, word=word, url=url))
+            await asyncio.gather(*tasks)
 
-        print('Traditional Spidering target %s' % target)
-        zap.spider.scan(target)
-        time.sleep(5)
-        while int(zap.spider.status()) < 100:
-            time.sleep(5)
-            print('Spider progress %: ' + zap.spider.status())
-            time.sleep(5)
-        print('Spider completed')
+        print(f"Found {len(founded_url)}")
 
-        print('Scanning target %s' % target)
-        zap.ascan.scan(target)
-        time.sleep(5)
-        while int(zap.ascan.status()) < 100:
-            time.sleep(5)
-            print('Ascan progress %: ' + zap.ascan.status())
-            time.sleep(5)
-        print('Ascan completed')
+        if founded_url:
+            for fu in founded_url:
+                print(fu)
 
-        # Report the results
-        print('Hosts: ' + ', '.join(zap.core.hosts))
-        print('Alerts: ')
-        # prints all alerts. can be commented
-        pprint(zap.core.alerts())
-        # HTML Report
-        with open('report.html', 'w') as f:
-            f.write(zap.core.htmlreport(apikey='q3bb8vid3divcqe81g4f041f7p'))
-        # XML Report
-        with open('report.xml', 'w') as f:
-            f.write(zap.core.xmlreport(apikey='q3bb8vid3divcqe81g4f041f7p'))
-
-        zap.core.shutdown()
     return render_template("index.html")
 
 
 if __name__ == "__main__":
-    app.run(port="8000")
+    app.run()
+
+
+#TODO: fix edge webdriver issue and retry the if condition
