@@ -1,6 +1,5 @@
-import asyncio
-import aiohttp
 import selenium.common
+import requests
 from fake_useragent import UserAgent
 from flask import Flask, request, render_template
 from selenium import webdriver
@@ -22,6 +21,7 @@ class ColorPalette:
     R = '\033[91m'  # red
     W = '\033[0m'  # white
     M = '\u001b[35m'  # magenta
+    P = '\033[95m'  # purple
 
 
 def read_wordlist():
@@ -37,7 +37,8 @@ def read_sql_list():
         splitted_sql_list = sql_list.strip().split("\n")
     return splitted_sql_list
 
-def check_for_elements(username, password, button, fu):
+
+def check_for_elements(fu):
     # go to the webpage
     driver.get(fu)
 
@@ -64,17 +65,21 @@ def check_for_elements(username, password, button, fu):
                 except selenium.common.exceptions.NoSuchElementException:
                     return
 
-    return True
+    return_list = [username, password, button]
+
+    return return_list
 
 
 def login_check(fu):
 
-    username = None
-    password = None
-    button = None
+    returned_list = check_for_elements(fu)
 
-    if check_for_elements(username, password, button, fu) is False:
+    if returned_list is None:
         return
+    else:
+        username = returned_list[0]
+        password = returned_list[1]
+        button = returned_list[2]
 
     # retrieve list of SQL injections
     sql_list = read_sql_list()
@@ -98,36 +103,41 @@ def login_check(fu):
 
 
 word_list = read_wordlist()
+tasks = []
 
 
-async def search_login(session, name):
+def search_login(name):
     # function to search for admin login page, prints different message depending on whether page was found
     try:
-        k = session.get(name, allow_redirects=False, verify_ssl=False)
-        async with k as response:
-            status_code = response.status
-            if status_code == 200:
-                print(f"{name} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
-                founded_url = name
-            elif status_code == 403:
-                print(f"{name} {ColorPalette.M} --> {ColorPalette.B} Forbidden! {ColorPalette.W}")
-                return
-            elif status_code == 404:
-                print(f"{name} {ColorPalette.M} --> {ColorPalette.R} Not Found! {ColorPalette.W}")
-                return
-            elif status_code in [302, 301]:
-                print(f"{name} {ColorPalette.M} --> {ColorPalette.Y} Redirecting! {ColorPalette.W}")
-                return
-            else:
-                print(f"{ColorPalette.B} {name} {ColorPalette.W}  --> {status_code} ")
-                return
-    except aiohttp.ClientConnectorError:
-        pass
-    return founded_url
+        # k = headers[0].get(name, allow_redirects=False, verify_ssl=False)
+        driver.get(name)
+        req = requests.get(name)
+        status_code = req.status_code
+        if status_code == 200:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
+            tasks.append(name)
+            return
+        elif status_code == 403:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.B} Forbidden! {ColorPalette.W}")
+            return
+        elif status_code == 404:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.R} Not Found! {ColorPalette.W}")
+            return
+        elif status_code  in [302, 301]:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.Y} Redirecting! {ColorPalette.W}")
+            return
+        elif status_code == 429:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.P} Too many requests! {ColorPalette.W}")
+            return
+        else:
+            print(f"{ColorPalette.B} {name} {ColorPalette.W}  --> {status_code} ")
+            return
+    finally:
+        return
 
 
 @app.route("/", methods=["POST", "GET"])
-async def home():
+def home():
     # main function, responsible for retrieving information from user and deploying functions accordingly
     if request.method == "POST":
         url_string = request.form["nm"]
@@ -138,27 +148,16 @@ async def home():
         else:
             url_string = "https://www." + url_string
 
-        tasks = []
-
         if not url_string.endswith('/'):
             url_string += '/'
 
-        headers = {
-            'User-Agent': ua.random
-        }
-
-        async with aiohttp.ClientSession(headers=headers) as session:
-            for word in word_list:
-                url = search_login(session=session, name=url_string + word)
-                if url is not None:
-                    tasks.append(url)
-            await asyncio.gather(*tasks)
+        for word in word_list:
+            search_login(name=url_string + word)
 
         if tasks:
             print(f"Found {len(tasks)}")
             for fu in tasks:
-                check = str(fu)
-                login_check(check)
+                login_check(fu)
 
     return render_template("index.html")
 
