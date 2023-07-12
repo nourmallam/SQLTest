@@ -11,7 +11,6 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 ua = UserAgent()
 app = Flask(__name__, template_folder='templates')
-driver = webdriver.Edge()
 
 
 class ColorPalette:
@@ -40,7 +39,7 @@ def read_sql_list():
 
 def check_for_elements(fu):
     # go to the webpage
-    driver.get(fu)
+    driver = webdriver.Edge(fu)
 
     # try different ID combinations to find username, password, and submit button of page
     try:
@@ -72,6 +71,9 @@ def check_for_elements(fu):
 
 def login_check(fu):
 
+    print("checking login now")
+    driver = webdriver.Edge(fu)
+
     returned_list = check_for_elements(fu)
 
     if returned_list is None:
@@ -102,38 +104,32 @@ def login_check(fu):
     WebDriverWait(driver, 1000).until(ec.alert_is_present(), "done")
 
 
-word_list = read_wordlist()
 tasks = []
 
 
-def search_login(name):
-    # function to search for admin login page, prints different message depending on whether page was found
-    try:
-        # k = headers[0].get(name, allow_redirects=False, verify_ssl=False)
-        driver.get(name)
-        req = requests.get(name)
-        status_code = req.status_code
+def search_login(url_string):
+    word_list = read_wordlist()
+    counter = 0
+
+    for word in word_list:
+        name = url_string + word
+        status_code = requests.get(name).status_code
         if status_code == 200:
             print(f"{name} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
             tasks.append(name)
-            return
         elif status_code == 403:
             print(f"{name} {ColorPalette.M} --> {ColorPalette.B} Forbidden! {ColorPalette.W}")
-            return
         elif status_code == 404:
             print(f"{name} {ColorPalette.M} --> {ColorPalette.R} Not Found! {ColorPalette.W}")
-            return
-        elif status_code  in [302, 301]:
+        elif status_code in [302, 301]:
             print(f"{name} {ColorPalette.M} --> {ColorPalette.Y} Redirecting! {ColorPalette.W}")
-            return
         elif status_code == 429:
             print(f"{name} {ColorPalette.M} --> {ColorPalette.P} Too many requests! {ColorPalette.W}")
-            return
         else:
             print(f"{ColorPalette.B} {name} {ColorPalette.W}  --> {status_code} ")
-            return
-    finally:
-        return
+        counter += 1
+
+    return
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -151,13 +147,15 @@ def home():
         if not url_string.endswith('/'):
             url_string += '/'
 
-        for word in word_list:
-            search_login(name=url_string + word)
+        search_login(url_string)
 
-        if tasks:
+        if len(tasks) > 0:
             print(f"Found {len(tasks)}")
-            for fu in tasks:
-                login_check(fu)
+        else:
+            print("Found nothing!")
+
+        for fu in tasks:
+            login_check(fu)
 
     return render_template("index.html")
 
