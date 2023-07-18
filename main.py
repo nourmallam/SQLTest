@@ -39,7 +39,8 @@ def read_sql_list():
 
 def check_for_elements(fu):
     # go to the webpage
-    driver = webdriver.Edge(fu)
+    driver = webdriver.Edge()
+    driver.get(fu)
 
     # try different ID combinations to find username, password, and submit button of page
     try:
@@ -72,7 +73,8 @@ def check_for_elements(fu):
 def login_check(fu):
 
     print("checking login now")
-    driver = webdriver.Edge(fu)
+    driver = webdriver.Edge()
+    driver.get(fu)
 
     returned_list = check_for_elements(fu)
 
@@ -109,14 +111,13 @@ tasks = []
 
 def search_login(url_string):
     word_list = read_wordlist()
-    counter = 0
-
     for word in word_list:
         name = url_string + word
         status_code = requests.get(name).status_code
         if status_code == 200:
             print(f"{name} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
             tasks.append(name)
+            login_check(name)
         elif status_code == 403:
             print(f"{name} {ColorPalette.M} --> {ColorPalette.B} Forbidden! {ColorPalette.W}")
         elif status_code == 404:
@@ -127,7 +128,6 @@ def search_login(url_string):
             print(f"{name} {ColorPalette.M} --> {ColorPalette.P} Too many requests! {ColorPalette.W}")
         else:
             print(f"{ColorPalette.B} {name} {ColorPalette.W}  --> {status_code} ")
-        counter += 1
 
     return
 
