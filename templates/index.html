@@ -2,10 +2,10 @@
 {% block title %}Login Page{% endblock %}
 
 {% block content %}
-<form action="#" method="post">
-    <p>Please enter a URL  </p>
-    <p>
-        <input type="text" name="nm">
-    </p>
-</form>
+    <div id="loading"></div>
+    <div id="content">
+        <form action="#" method="POST">
+            <input type="text" id="url" name="nm" placeholder="Type anything here" onformdata="loading();">
+        </form>
+    </div>
 {% endblock %}
