@@ -1,7 +1,7 @@
 import selenium.common
 import requests
 from fake_useragent import UserAgent
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
@@ -39,7 +39,8 @@ def read_sql_list():
 
 def check_for_elements(fu):
     # go to the webpage
-    driver = webdriver.Edge(fu)
+    driver = webdriver.Edge()
+    driver.get(fu)
 
     # try different ID combinations to find username, password, and submit button of page
     try:
@@ -72,7 +73,8 @@ def check_for_elements(fu):
 def login_check(fu):
 
     print("checking login now")
-    driver = webdriver.Edge(fu)
+    driver = webdriver.Edge()
+    driver.get(fu)
 
     returned_list = check_for_elements(fu)
 
@@ -107,30 +109,27 @@ def login_check(fu):
 tasks = []
 
 
-@app.route("/searching/")
 def search_login(url_string):
     word_list = read_wordlist()
-    counter = 0
+    for word in word_list:
+        name = url_string + word
+        status_code = requests.get(name).status_code
+        if status_code == 200:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
+            tasks.append(name)
+            login_check(name)
+        elif status_code == 403:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.B} Forbidden! {ColorPalette.W}")
+        elif status_code == 404:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.R} Not Found! {ColorPalette.W}")
+        elif status_code in [302, 301]:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.Y} Redirecting! {ColorPalette.W}")
+        elif status_code == 429:
+            print(f"{name} {ColorPalette.M} --> {ColorPalette.P} Too many requests! {ColorPalette.W}")
+        else:
+            print(f"{ColorPalette.B} {name} {ColorPalette.W}  --> {status_code} ")
 
-    # for word in word_list:
-    #     name = url_string + word
-    #     status_code = requests.get(name).status_code
-    #     if status_code == 200:
-    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
-    #         tasks.append(name)
-    #     elif status_code == 403:
-    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.B} Forbidden! {ColorPalette.W}")
-    #     elif status_code == 404:
-    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.R} Not Found! {ColorPalette.W}")
-    #     elif status_code in [302, 301]:
-    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.Y} Redirecting! {ColorPalette.W}")
-    #     elif status_code == 429:
-    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.P} Too many requests! {ColorPalette.W}")
-    #     else:
-    #         print(f"{ColorPalette.B} {name} {ColorPalette.W}  --> {status_code} ")
-    #     counter += 1
-
-    return render_template("buffer.html")
+    return
 
 
 @app.route("/", methods=["POST", "GET"])
