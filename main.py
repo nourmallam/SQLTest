@@ -1,7 +1,7 @@
 import selenium.common
 import requests
 from fake_useragent import UserAgent
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect, url_for
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
@@ -107,29 +107,30 @@ def login_check(fu):
 tasks = []
 
 
+@app.route("/searching/")
 def search_login(url_string):
     word_list = read_wordlist()
     counter = 0
 
-    for word in word_list:
-        name = url_string + word
-        status_code = requests.get(name).status_code
-        if status_code == 200:
-            print(f"{name} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
-            tasks.append(name)
-        elif status_code == 403:
-            print(f"{name} {ColorPalette.M} --> {ColorPalette.B} Forbidden! {ColorPalette.W}")
-        elif status_code == 404:
-            print(f"{name} {ColorPalette.M} --> {ColorPalette.R} Not Found! {ColorPalette.W}")
-        elif status_code in [302, 301]:
-            print(f"{name} {ColorPalette.M} --> {ColorPalette.Y} Redirecting! {ColorPalette.W}")
-        elif status_code == 429:
-            print(f"{name} {ColorPalette.M} --> {ColorPalette.P} Too many requests! {ColorPalette.W}")
-        else:
-            print(f"{ColorPalette.B} {name} {ColorPalette.W}  --> {status_code} ")
-        counter += 1
+    # for word in word_list:
+    #     name = url_string + word
+    #     status_code = requests.get(name).status_code
+    #     if status_code == 200:
+    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.G} Boom! {ColorPalette.W}")
+    #         tasks.append(name)
+    #     elif status_code == 403:
+    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.B} Forbidden! {ColorPalette.W}")
+    #     elif status_code == 404:
+    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.R} Not Found! {ColorPalette.W}")
+    #     elif status_code in [302, 301]:
+    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.Y} Redirecting! {ColorPalette.W}")
+    #     elif status_code == 429:
+    #         print(f"{name} {ColorPalette.M} --> {ColorPalette.P} Too many requests! {ColorPalette.W}")
+    #     else:
+    #         print(f"{ColorPalette.B} {name} {ColorPalette.W}  --> {status_code} ")
+    #     counter += 1
 
-    return
+    return render_template("buffer.html")
 
 
 @app.route("/", methods=["POST", "GET"])
